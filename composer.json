@@ -2,9 +2,13 @@
     "name": "alengo/block-settings-bundle",
     "description": "Configurable block settings injection for Sulu CMS content blocks",
     "type": "symfony-bundle",
-    "license": "MIT",
-    "version": "1.0.0",
     "homepage": "https://github.com/alengodev/SuluBlockSettingsBundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alexander Huber-De Monte"
+        }
+    ],
     "support": {
         "issues": "https://github.com/alengodev/SuluBlockSettingsBundle/issues",
         "source": "https://github.com/alengodev/SuluBlockSettingsBundle"
