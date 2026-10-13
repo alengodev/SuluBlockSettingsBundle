@@ -16,9 +16,9 @@
     "require": {
         "php": "^8.2",
         "sulu/sulu": "^3.0",
-        "symfony/dependency-injection": "^7.0",
-        "symfony/framework-bundle": "^7.0",
-        "symfony/http-kernel": "^7.0"
+        "symfony/dependency-injection": "^7.1 || ^8.0",
+        "symfony/framework-bundle": "^7.1 || ^8.0",
+        "symfony/http-kernel": "^7.1 || ^8.0"
     },
     "autoload": {
         "psr-4": {
@@ -27,7 +27,7 @@
     },
     "extra": {
         "symfony": {
-            "require": "^7.0"
+            "require": "^7.1 || ^8.0"
         }
     }
 }
