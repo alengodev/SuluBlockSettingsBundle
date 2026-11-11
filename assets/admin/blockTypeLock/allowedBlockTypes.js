@@ -2,13 +2,6 @@
  * Which section types (e.g. content-*) a section block may switch to: only those whose block fields allow all of its
  * inline block types (e.g. property-*). Pure functions, used by TypeLockingSortableBlock.
  */
-/* global __BLOCK_TYPE_LOCK_SECTION_PREFIX__ */
-// Set via the sectionTypePrefix option of ../webpack.js (DefinePlugin)
-export const SECTION_TYPE_PREFIX = typeof __BLOCK_TYPE_LOCK_SECTION_PREFIX__ === 'string'
-    && __BLOCK_TYPE_LOCK_SECTION_PREFIX__ !== ''
-    ? __BLOCK_TYPE_LOCK_SECTION_PREFIX__
-    : 'content-';
-
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const isObject = (value) => !!value && typeof value === 'object';
 
@@ -75,10 +68,11 @@ function allowsInlineBlocks(schemaType, inlineBlockTypes) {
  * Types of the block field (keys of schemaTypes) the block may switch to, the active type included.
  * Only values of fields that are block fields of the active type count as inline blocks (other fields may hold
  * arrays of objects with a "type" too, e.g. selections).
- * null: no restriction (no section type, no inline blocks or no metadata).
+ * null: no restriction (no prefix, no section type, no inline blocks or no metadata).
  */
-export function getAllowedTypes(activeType, inlineBlockTypes, schemaTypes, sectionTypePrefix = SECTION_TYPE_PREFIX) {
-    if (typeof activeType !== 'string' || !activeType.startsWith(sectionTypePrefix)
+export function getAllowedTypes(activeType, inlineBlockTypes, schemaTypes, sectionTypePrefix) {
+    if (typeof sectionTypePrefix !== 'string' || sectionTypePrefix === ''
+        || typeof activeType !== 'string' || !activeType.startsWith(sectionTypePrefix)
         || !isObject(schemaTypes) || !hasOwn(schemaTypes, activeType) || !isObject(inlineBlockTypes)
     ) {
         return null;

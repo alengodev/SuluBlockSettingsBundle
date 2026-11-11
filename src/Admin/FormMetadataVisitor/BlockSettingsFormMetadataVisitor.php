@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Alengo\SuluBlockSettingsBundle\Admin\FormMetadataVisitor;
 
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\FormMetadata;
+use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\FormMetadataLoaderInterface;
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\FormMetadataVisitorInterface;
 use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\SectionMetadata;
-use Sulu\Bundle\AdminBundle\Metadata\FormMetadata\XmlFormMetadataLoader;
 
 /**
  * Injects configured section forms into Sulu's block settings form.
@@ -21,7 +21,7 @@ final class BlockSettingsFormMetadataVisitor implements FormMetadataVisitorInter
      * @param string[] $sections XML form keys to inject, in order
      */
     public function __construct(
-        private readonly XmlFormMetadataLoader $xmlFormMetadataLoader,
+        private readonly FormMetadataLoaderInterface $formMetadataLoader,
         private readonly array $sections,
         private readonly string $formKey = 'content_block_settings',
     ) {
@@ -36,7 +36,7 @@ final class BlockSettingsFormMetadataVisitor implements FormMetadataVisitorInter
         $existingSectionNames = $this->getExistingSectionNames($formMetadata);
 
         foreach ($this->sections as $sectionKey) {
-            $subForm = $this->xmlFormMetadataLoader->getMetadata($sectionKey, $locale, $metadataOptions);
+            $subForm = $this->formMetadataLoader->getMetadata($sectionKey, $locale, $metadataOptions);
 
             if (!$subForm instanceof FormMetadata) {
                 continue;

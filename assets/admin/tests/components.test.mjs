@@ -15,6 +15,10 @@ const adminPath = process.env.BLOCK_TYPE_LOCK_ADMIN;
 const skip = !adminPath;
 
 const STUBS = {
+    'sulu-admin-bundle/services/initializer': `
+        import {observable} from 'mobx';
+        export default observable({config: undefined}, {config: observable.ref});
+    `,
     'sulu-admin-bundle/components/SingleSelect': `
         import React from 'react';
         const Option = () => null;
@@ -57,9 +61,11 @@ const ENTRY = `
     import SortableBlock from '${path.join(BLOCK_TYPE_LOCK_PATH, 'SortableBlock.js')}';
     import FieldBlocks from '${path.join(BLOCK_TYPE_LOCK_PATH, 'FieldBlocks.js')}';
     import BlockTypeLockContext from '${path.join(BLOCK_TYPE_LOCK_PATH, 'BlockTypeLockContext.js')}';
+    import {getSectionTypePrefix} from '${path.join(BLOCK_TYPE_LOCK_PATH, 'config.js')}';
+    import initializer from 'sulu-admin-bundle/services/initializer';
     useStaticRendering(true);
     export {React, renderToStaticMarkup, observable, SingleSelect, BlockTypeSelect, SortableBlock, FieldBlocks,
-        BlockTypeLockContext};
+        BlockTypeLockContext, getSectionTypePrefix, initializer};
 `;
 
 let lib;
@@ -115,7 +121,11 @@ before(async () => {
 
 after(() => dir && fs.rmSync(dir, {recursive: true, force: true}));
 
-function render(element) {
+const lockConfig = (blockTypeLock) => ({alengo_block_settings: {blockTypeLock}});
+const ENABLED = lockConfig({enabled: true, sectionTypePrefix: 'content-'});
+
+function render(element, config = ENABLED) {
+    lib.initializer.config = config;
     globalThis.recorded = {blocks: [], lock: []};
     lib.renderToStaticMarkup(element);
 
@@ -129,15 +139,45 @@ const schemaTypes = {
     'content-plain': {title: 'Plain', form: {}},
 };
 
-function renderBlock(value, onTypeChange = () => {}) {
+function renderBlock(value, onTypeChange = () => {}, config = ENABLED) {
     const {React, FieldBlocks, SortableBlock} = lib;
 
     return render(
         React.createElement(FieldBlocks, {types: schemaTypes},
             React.createElement(SortableBlock, {activeType: value.type, index: 0, onTypeChange, value})
-        )
+        ),
+        config
     );
 }
+
+test('getSectionTypePrefix reads alengo_block_settings.blockTypeLock, disabled unless enabled === true', {skip}, () => {
+    const {getSectionTypePrefix, initializer} = lib;
+    assert.equal(getSectionTypePrefix(undefined), null);
+    assert.equal(getSectionTypePrefix({}), null);
+    assert.equal(getSectionTypePrefix(lockConfig({enabled: false, sectionTypePrefix: 'content-'})), null);
+    assert.equal(getSectionTypePrefix(lockConfig({enabled: 'true', sectionTypePrefix: 'content-'})), null);
+    assert.equal(getSectionTypePrefix(lockConfig({enabled: true, sectionTypePrefix: ' '})), null);
+    assert.equal(getSectionTypePrefix(lockConfig({enabled: true})), null);
+    assert.equal(getSectionTypePrefix(lockConfig({enabled: true, sectionTypePrefix: 'section-'})), 'section-');
+    initializer.config = ENABLED;
+    assert.equal(getSectionTypePrefix(), 'content-');
+});
+
+test('lock disabled (default): block passed through unchanged', {skip}, () => {
+    const onTypeChange = () => {};
+    const value = {type: 'content-text', blocks: [{type: 'property-image'}]};
+    [null, {}, lockConfig({enabled: false, sectionTypePrefix: 'content-'})].forEach((config) => {
+        const {blocks, lock} = renderBlock(value, onTypeChange, config);
+        assert.deepEqual(lock, [null]);
+        assert.equal(blocks[0].onTypeChange, onTypeChange);
+    });
+});
+
+test('section type prefix comes from the config', {skip}, () => {
+    const value = {type: 'content-text', blocks: [{type: 'property-image'}]};
+    const {lock} = renderBlock(value, () => {}, lockConfig({enabled: true, sectionTypePrefix: 'section-'}));
+    assert.deepEqual(lock, [null]);
+});
 
 test('FieldBlocks passes all props through', {skip}, () => {
     const {React, FieldBlocks} = lib;

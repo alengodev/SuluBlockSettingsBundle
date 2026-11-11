@@ -15,12 +15,7 @@ class NormalModuleReplacementPlugin {
         this.handler = handler;
     }
 }
-class DefinePlugin {
-    constructor(definitions) {
-        this.definitions = definitions;
-    }
-}
-const fakeWebpack = {NormalModuleReplacementPlugin, DefinePlugin};
+const fakeWebpack = {NormalModuleReplacementPlugin};
 
 const replacementPlugins = (config) => config.plugins.filter((plugin) => plugin instanceof NormalModuleReplacementPlugin);
 const checkPlugin = (config) => config.plugins.find((plugin) => plugin instanceof BlockTypeLockCheckPlugin);
@@ -51,18 +46,17 @@ test('wrapper files exist', () => {
     REPLACEMENTS.forEach(({wrapper}) => assert.ok(fs.existsSync(path.join(BLOCK_TYPE_LOCK_PATH, wrapper)), wrapper));
 });
 
-test('adds three replacements, the prefix definition and the check plugin', () => {
-    const config = applyBlockTypeLock({plugins: []}, fakeWebpack, {sectionTypePrefix: 'section-'});
+test('adds three replacements and the check plugin, keeps existing plugins', () => {
+    const existing = {};
+    const config = applyBlockTypeLock({plugins: [existing]}, fakeWebpack);
+    assert.equal(config.plugins[0], existing);
     assert.equal(replacementPlugins(config).length, 3);
-    const define = config.plugins.find((plugin) => plugin instanceof DefinePlugin);
-    assert.deepEqual(define.definitions, {__BLOCK_TYPE_LOCK_SECTION_PREFIX__: '"section-"'});
     assert.ok(checkPlugin(config));
+    assert.equal(config.plugins.length, 5);
 });
 
-test('defaults: content- prefix, missing plugins array', () => {
-    const config = applyBlockTypeLock({}, fakeWebpack);
-    const define = config.plugins.find((plugin) => plugin instanceof DefinePlugin);
-    assert.equal(define.definitions.__BLOCK_TYPE_LOCK_SECTION_PREFIX__, '"content-"');
+test('creates a missing plugins array', () => {
+    assert.equal(applyBlockTypeLock({}, fakeWebpack).plugins.length, 4);
 });
 
 test('is idempotent', () => {
@@ -139,8 +133,7 @@ test('rejects invalid arguments', () => {
     assert.throws(() => applyBlockTypeLock([{}], fakeWebpack), TypeError);
     assert.throws(() => applyBlockTypeLock({}, {}), TypeError);
     assert.throws(() => applyBlockTypeLock({}, fakeWebpack, null), TypeError);
-    assert.throws(() => applyBlockTypeLock({}, fakeWebpack, {sectionTypePrefix: ''}), TypeError);
-    assert.throws(() => applyBlockTypeLock({}, fakeWebpack, {sectionTypePrefix: 3}), TypeError);
+    assert.throws(() => applyBlockTypeLock({}, fakeWebpack, {sectionTypePrefix: 'content-'}), /block_type_lock/);
     assert.throws(() => applyBlockTypeLock({}, fakeWebpack, {strict: 'yes'}), TypeError);
 });
 
@@ -196,6 +189,12 @@ test('real Sulu admin build: all three imports are replaced', {skip: !adminPath,
             modules.some((module) => (module.nameForCondition || '') === path.join(BLOCK_TYPE_LOCK_PATH, wrapper)),
             wrapper
         ));
+
+        // config.js must read the initializer instance Sulu fills with the admin config, not a second copy
+        const initializers = modules.filter((module) => /sulu-admin-bundle[/\\]services[/\\]initializer[/\\]index\.js$/
+            .test(module.nameForCondition || ''));
+        assert.equal(initializers.length, 1);
+        assert.ok(modules.some((module) => (module.nameForCondition || '') === path.join(BLOCK_TYPE_LOCK_PATH, 'config.js')));
     } finally {
         process.chdir(cwd);
         fs.rmSync(dir, {recursive: true, force: true});

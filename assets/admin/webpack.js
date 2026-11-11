@@ -12,7 +12,10 @@ const path = require('path');
  *
  *     const webpack = require(path.resolve(env.node_modules_path, 'webpack'));
  *     const applyBlockTypeLock = require(path.resolve(env.node_modules_path, 'sulu-block-settings-bundle', 'webpack.js'));
- *     applyBlockTypeLock(config, webpack, {sectionTypePrefix: 'content-'});
+ *     applyBlockTypeLock(config, webpack);
+ *
+ * The lock itself is switched on at runtime via alengo_block_settings.block_type_lock (Symfony config, default off),
+ * without it the wrappers pass everything through.
  *
  * If a Sulu update moves or renames one of the replaced imports, the replacement would silently stop applying and the
  * lock would be gone. Therefore every replacement must match at least once per build, otherwise the build fails
@@ -48,17 +51,19 @@ function validateOptions(options) {
         throw new TypeError(`${PLUGIN_NAME}: options must be an object.`);
     }
 
-    const {sectionTypePrefix = 'content-', strict = true} = options;
+    const {strict = true} = options;
 
-    if (typeof sectionTypePrefix !== 'string' || sectionTypePrefix.trim() === '') {
-        throw new TypeError(`${PLUGIN_NAME}: "sectionTypePrefix" must be a non-empty string.`);
+    if ('sectionTypePrefix' in options) {
+        throw new TypeError(
+            `${PLUGIN_NAME}: "sectionTypePrefix" moved to alengo_block_settings.block_type_lock.section_type_prefix.`
+        );
     }
 
     if (typeof strict !== 'boolean') {
         throw new TypeError(`${PLUGIN_NAME}: "strict" must be a boolean.`);
     }
 
-    return {sectionTypePrefix, strict};
+    return {strict};
 }
 
 function createReplacementHandler(replacement, matches) {
@@ -108,13 +113,11 @@ function applyBlockTypeLock(config, webpack, options = {}) {
         throw new TypeError(`${PLUGIN_NAME}: config must be a single webpack configuration object.`);
     }
 
-    if (!webpack || typeof webpack.NormalModuleReplacementPlugin !== 'function'
-        || typeof webpack.DefinePlugin !== 'function'
-    ) {
+    if (!webpack || typeof webpack.NormalModuleReplacementPlugin !== 'function') {
         throw new TypeError(`${PLUGIN_NAME}: pass the webpack module of the admin build as second argument.`);
     }
 
-    const {sectionTypePrefix, strict} = validateOptions(options);
+    const {strict} = validateOptions(options);
 
     if (config[APPLIED]) {
         return config;
@@ -128,9 +131,6 @@ function applyBlockTypeLock(config, webpack, options = {}) {
             replacement.request,
             createReplacementHandler(replacement, matches)
         )),
-        new webpack.DefinePlugin({
-            __BLOCK_TYPE_LOCK_SECTION_PREFIX__: JSON.stringify(sectionTypePrefix),
-        }),
         new BlockTypeLockCheckPlugin(REPLACEMENTS, matches, strict)
     );
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Alengo\SuluBlockSettingsBundle;
 
+use Alengo\SuluBlockSettingsBundle\Admin\BlockSettingsAdmin;
 use Alengo\SuluBlockSettingsBundle\Admin\FormMetadataVisitor\BlockSettingsFormMetadataVisitor;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -31,15 +32,43 @@ class BlockSettingsBundle extends AbstractBundle
                 ->end()
                 ->arrayNode('sections')
                     ->info('List of XML form keys to inject into the block settings form, in order')
-                    ->scalarPrototype()->end()
+                    ->scalarPrototype()
+                        ->validate()
+                            ->ifTrue(static fn (mixed $value): bool => !\is_string($value) || '' === \trim($value))
+                            ->thenInvalid('Each section must be a non-empty form key, got %s.')
+                        ->end()
+                    ->end()
                     ->defaultValue([])
+                    ->validate()
+                        ->ifTrue(static fn (array $sections): bool => \count($sections) !== \count(\array_unique($sections)))
+                        ->thenInvalid('Each section may only be listed once, got %s.')
+                    ->end()
+                ->end()
+                ->arrayNode('block_type_lock')
+                    ->info('Restricts the type select of section blocks to types allowing their inline blocks (requires the admin build integration, see README)')
+                    ->canBeEnabled()
+                    ->children()
+                        ->scalarNode('section_type_prefix')
+                            ->defaultValue('content-')
+                            ->info('Block types starting with this prefix are section blocks')
+                            ->validate()
+                                ->ifTrue(static fn (mixed $value): bool => !\is_string($value) || '' === \trim($value))
+                                ->thenInvalid('"section_type_prefix" must be a non-empty string.')
+                            ->end()
+                        ->end()
+                    ->end()
                 ->end()
             ->end()
         ;
     }
 
     /**
-     * @param array{form_key: string, priority: int, sections: list<string>} $config
+     * @param array{
+     *     form_key: string,
+     *     priority: int,
+     *     sections: list<string>,
+     *     block_type_lock: array{enabled: bool, section_type_prefix: string},
+     * } $config
      */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
@@ -50,5 +79,13 @@ class BlockSettingsBundle extends AbstractBundle
         $definition->addTag('sulu_admin.form_metadata_visitor', ['priority' => $config['priority']]);
 
         $builder->setDefinition(BlockSettingsFormMetadataVisitor::class, $definition);
+
+        $admin = new Definition(BlockSettingsAdmin::class);
+        $admin->addArgument($config['block_type_lock']['enabled']);
+        $admin->addArgument($config['block_type_lock']['section_type_prefix']);
+        $admin->addTag('sulu.admin');
+        $admin->addTag('sulu.context', ['context' => 'admin']);
+
+        $builder->setDefinition(BlockSettingsAdmin::class, $admin);
     }
 }

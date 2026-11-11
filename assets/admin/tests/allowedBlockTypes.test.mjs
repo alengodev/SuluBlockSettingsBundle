@@ -1,11 +1,14 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    SECTION_TYPE_PREFIX,
-    getAllowedTypes,
+    getAllowedTypes as getAllowedTypesWithPrefix,
     getBlockFields,
     getInlineBlockTypes,
 } from '../blockTypeLock/allowedBlockTypes.js';
+
+const getAllowedTypes = (activeType, inlineBlockTypes, schemaTypes, prefix = 'content-') => (
+    getAllowedTypesWithPrefix(activeType, inlineBlockTypes, schemaTypes, prefix)
+);
 
 const blockField = (...types) => ({type: 'block', types: Object.fromEntries(types.map((type) => [type, {}]))});
 
@@ -16,10 +19,6 @@ const schemaTypes = {
     'content-plain': {form: {title: {type: 'text_line'}}},
     'content-other-field': {form: {items: blockField('property-text', 'property-image')}},
 };
-
-test('default prefix', () => {
-    assert.equal(SECTION_TYPE_PREFIX, 'content-');
-});
 
 test('getInlineBlockTypes collects block types per array field, deduplicated', () => {
     assert.deepEqual(
@@ -103,6 +102,13 @@ test('inherited object keys are not treated as allowed block types', () => {
         getAllowedTypes('content-text', {blocks: ['toString']}, schemaTypes),
         ['content-text']
     );
+});
+
+test('no restriction without a section prefix (lock disabled)', () => {
+    [undefined, null, ''].forEach((prefix) => assert.equal(
+        getAllowedTypesWithPrefix('content-text', {blocks: ['property-image']}, schemaTypes, prefix),
+        null
+    ));
 });
 
 test('custom section prefix', () => {

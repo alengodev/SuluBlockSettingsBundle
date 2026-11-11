@@ -25,9 +25,20 @@
             "Alengo\\SuluBlockSettingsBundle\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Alengo\\SuluBlockSettingsBundle\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
     "extra": {
         "symfony": {
             "require": "^7.1 || ^8.0"
         }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5 || ^12.0"
     }
 }
