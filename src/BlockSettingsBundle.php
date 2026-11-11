@@ -38,6 +38,9 @@ class BlockSettingsBundle extends AbstractBundle
         ;
     }
 
+    /**
+     * @param array{form_key: string, priority: int, sections: list<string>} $config
+     */
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $definition = new Definition(BlockSettingsFormMetadataVisitor::class);

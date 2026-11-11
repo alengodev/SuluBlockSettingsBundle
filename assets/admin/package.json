@@ -1,0 +1,19 @@
+{
+    "name": "sulu-block-settings-bundle",
+    "version": "1.0.0",
+    "private": true,
+    "license": "MIT",
+    "files": [
+        "webpack.js",
+        "blockTypeLock/"
+    ],
+    "scripts": {
+        "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'tests/*.test.mjs'"
+    },
+    "peerDependencies": {
+        "mobx": "^4.0",
+        "mobx-react": "^5.0",
+        "react": "^16.2.0 || ^17.0.0",
+        "sulu-admin-bundle": "*"
+    }
+}
